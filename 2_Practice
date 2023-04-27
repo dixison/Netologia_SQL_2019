@@ -1,0 +1,132 @@
+--1. Получите атрибуты id фильма, название, описание, год релиза из таблицы фильмы.
+--Переименуйте поля так, чтобы все они начинались со слова Film (FilmTitle вместо title и тп)
+--- используйте ER - диаграмму, чтобы найти подходящую таблицу
+--- as - для задания синонимов 
+
+SELECT f.film_id film_film_id
+, f.title film_title
+, f.description film_description
+, f.release_year film_release_year
+FROM film f;
+
+--2. В одной из таблиц есть два атрибута:
+--rental_duration - длина периода аренды в днях  
+--rental_rate - стоимость аренды фильма на этот промежуток времени. 
+--Для каждого фильма из данной таблицы получите стоимость его аренды в день
+--- используйте ER - диаграмму, чтобы найти подходящую таблицу
+--- стоимость аренды в день - отношение rental_rate к rental_duration
+
+SELECT rental_rate / rental_duration
+FROM film f;  
+
+--2* В полученной таблице задайте вычисленному столбцу псевдоним cost_per_day
+--- as - для задания синонимов 
+
+SELECT rental_rate / rental_duration cost_per_day
+FROM film f; 
+
+--3.1 Отсортировать список фильмов по убыванию стоимости за день аренды (п.2)
+--- используйте order by (по умолчанию сортирует по возрастанию)
+--- desc - сортировка по убыванию
+
+SELECT f.title 
+,rental_rate / rental_duration cost_per_day
+FROM film f
+ORDER BY cost_per_day DESC ;
+
+--3.1* Отсортируйте таблцу платежей по возрастанию суммы платежа (amount)
+--- используйте ER - диаграмму, чтобы найти подходящую таблицу
+--- используйте order by 
+--- asc - сортировка по возрастанию 
+
+SELECT *
+FROM payment p 
+ORDER BY p.amount ASC; 
+
+--3.2 Вывести топ-10 самых дорогих фильмов по стоимости за день аренды
+--- используйте Limit
+
+SELECT f.title 
+,round(rental_rate / rental_duration, 2) cost_per_day
+FROM film f
+ORDER BY cost_per_day DESC 
+LIMIT 10;
+
+--3.3 Вывести топ-5 самых дорогих фильмов по стоимости аренды за день, начиная с 4-ой позиции
+--- воспользуйтесь Limit и Offset
+
+SELECT f.title 
+,round(rental_rate / rental_duration, 2) cost_per_day
+FROM film f
+ORDER BY cost_per_day DESC 
+LIMIT 5
+OFFSET 3;
+
+--3.3* Вывести топ-15 самых низких платежей, начиная с позиции 14000
+--- воспользуйтесь Limit и Offset
+
+SELECT f.title 
+,round(rental_rate / rental_duration, 2) cost_per_day
+FROM film f
+ORDER BY cost_per_day DESC 
+LIMIT 15
+OFFSET 140;
+
+--4. Вывести все уникальные годы выпуска фильмов
+--- воспользуйтесь distinct
+
+SELECT DISTINCT release_year 
+FROM film f;
+
+--4* Вывести уникальные имена покупателей
+--- используйте ER - диаграмму, чтобы найти подходящую таблицу
+--- воспользуйтесь distinct
+
+SELECT DISTINCT c.first_name || ' ' || c.last_name 
+FROM customer c; 
+
+--5.1. Вывести весь список фильмов, имеющих рейтинг 'PG-13', в виде: "название - год выпуска"
+--- используйте ER - диаграмму, чтобы найти подходящую таблицу
+--- "||" - оператор конкатенации 
+--- where - конструкция фильтрации
+--- "=" - оператор сравнения
+
+SELECT f.title || ' - ' || f.release_year 
+FROM film f  
+WHERE f.rating = 'PG-13';
+
+--5.2 Вывести весь список фильмов, имеющих рейтинг, начинающийся на 'PG'
+--- cast(название столбца as тип) - преобразование
+--- like - поиск по шаблону
+--- ilike - регистронезависимый поиск
+
+SELECT f.title || ' - ' || f.release_year 
+FROM film f  
+WHERE CAST (f.rating AS TEXT) ILIKE '%PG%';
+
+--5.2* Получить информацию по покупателям с именем содержашим подстроку'jam' (независимо от регистра написания), 
+--в виде: "имя фамилия" - одной строкой.
+--- "||" - оператор конкатенации
+--- where - конструкция фильтрации
+--- ilike - регистронезависимый поиск
+
+SELECT c.first_name  || ' ' || c.last_name fio 
+FROM customer c 
+WHERE c.first_name ILIKE '%jam%';
+
+--6. Получить id покупателей, арендовавших фильмы в срок с 27-05-2005 по 28-05-2005
+--- используйте ER - диаграмму, чтобы найти подходящую таблицу
+--- between - задает промежуток (аналог ... >= ... and ... <= ...)
+
+SELECT r.customer_id 
+FROM rental r 
+WHERE r.rental_date :: date BETWEEN '2005-05-27' AND '2005-05-28'
+
+--6* Вывести платежи поступившие после 30-04-2007
+--- используйте ER - диаграмму, чтобы найти подходящую таблицу
+--- > - строгое больше (< - строгое меньше)
+
+SELECT payment_id 
+, payment_date 
+FROM payment p 
+WHERE p.payment_date >= '2007-04-30'
