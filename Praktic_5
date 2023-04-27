@@ -1,0 +1,271 @@
+--============= оконные функции =============
+
+/*1. Выведите таблицу с 3-мя полями: название фильма, имя актера и количество фильмов, в которых он снимался
+* Используйте таблицу film
+* Соедините с film_actor
+* Соедините с actor
+* count - агрегатная функция подсчета значений
+* Задайте окно с использованием предложений over и partition BY*/
+SELECT title 
+, actorAll
+,count(title) OVER (PARTITION BY actorAll) AS count_role
+FROM (SELECT f.title
+	, a.first_name ||' '|| a.last_name actorAll  
+FROM film f  
+LEFT JOIN film_actor fa ON f.film_id = fa.film_id 
+LEFT JOIN actor a ON fa.actor_id = a.actor_id 
+GROUP BY f.title
+	, a.first_name ||' '|| a.last_name
+ORDER BY actorAll ) AS NEW
+ORDER BY actorAll DESC 
+; 
+
+SELECT f.title
+	, a.first_name ||' '|| a.last_name actorAll 
+	, count( title) OVER (PARTITION BY a.first_name ||' '|| a.last_name ) AS count_role
+FROM film f  
+LEFT JOIN film_actor fa ON f.film_id = fa.film_id 
+LEFT JOIN actor a ON fa.actor_id = a.actor_id 
+GROUP BY f.title
+	, a.first_name ||' '|| a.last_name
+ORDER BY actorAll DESC
+;
+
+/*1.1. Выведите таблицу, содержащую имена покупателей, арендованные ими фильмы и средний платеж каждого покупателя
+* используйте таблицу customer
+* соедините с paymen
+* соедините с rental
+* соедините с inventory
+* соедините с film
+* avg - функция, вычисляющая среднее значение
+* Задайте окно с использованием предложений over и partition by*/
+
+SELECT c.first_name ||' '|| c.last_name fio
+, f.title
+, round(avg(f.replacement_cost) OVER (PARTITION BY r.customer_id), 2) AS avg_cost
+FROM customer c 
+JOIN payment p ON c.customer_id = p.customer_id 
+JOIN rental r ON r.rental_id = p.rental_id 
+JOIN inventory i ON i.inventory_id = r.inventory_id 
+JOIN film f ON f.film_id = i.film_id
+ORDER BY fio
+;
+
+--============= общие табличные выражения =============
+
+/*2.  При помощи CTE выведите таблицу со следующим содержанием:
+Фамилия и Имя сотрудника (staff) и количество прокатов двд (retal), которые он продал
+* Создайте CTE:
+ - Используйте таблицу staff
+ - соедините с rental
+ - || - оператор конкатенации
+ * напишите запрос к полученной CTE:
+ - сгруппируйте по fio
+ - count - агрегатная функция подсчета значений
+ - выведите значения в виде: fio, количество прокатов(rental_id)*/
+WITH cte_full_name AS (
+SELECT count(rental_id) counta,
+s.first_name ||' '|| s.last_name fio
+FROM staff s
+INNER JOIN rental r ON r.staff_id  = s.staff_id
+GROUP BY s.first_name ||' '|| s.last_name
+)
+SELECT fio
+, counta 
+FROM cte_full_name
+;
+
+WITH cte_full_name AS (
+SELECT rental_id for_counta,
+s.first_name ||' '|| s.last_name fio
+FROM staff s
+INNER JOIN rental r ON r.staff_id  = s.staff_id
+)
+SELECT fio
+, count(for_counta) counta
+FROM cte_full_name
+GROUP BY fio
+;
+
+/*2.1. Выведите фильмы, с категорией начинающейся с буквы "C"
+* Создайте CTE:
+ - Используйте таблицу category
+ - Отфильтруйте строки с помощью оператора like 
+* Соедините полученное табличное выражение с таблицей film_category
+* Соедините с таблицей film
+* Выведите информацию о фильмах:
+title, category."name"*/
+
+WITH cte_cat AS (
+SELECT category_id
+, "name" 
+FROM category c 
+WHERE c."name" LIKE 'C%'
+)
+SELECT f.title
+, cte_cat."name"
+FROM cte_cat
+JOIN film_category fc ON fc.category_id = cte_cat.category_id
+JOIN film f ON f.film_id = fc.film_id 
+
+--============= общие табличные выражения (рекурсивные) =============
+ 
+-- 3.Вычислите факториал
+-- + Создайте CTE
+-- * стартовая часть рекурсии (т.н. "anchor") должна позволять вычислять начальное значение
+-- *  рекурсивная часть опираться на данные с предыдущей итерации и иметь условие останова
+-- + Напишите запрос к CTE
+
+ WITH RECURSIVE r AS (
+ 	SELECT
+		1 AS i
+		, 1 AS factorial
+	UNION 
+	SELECT 
+		i+1 AS i
+		, factorial * (i+1) AS factorial
+	FROM r 
+	WHERE i < 10
+ 	)
+ SELECT * FROM r
+ ;
+ 
+-- 3.1. Числа Фиббоначи
+-- F0 = 0
+-- F1 = 1
+-- F(n+1) = F(n) + F(n-1)
+-- Напишите скрипт, позволяющий вывести числа Фиббоначи от 1 до 15
+--  * стартовая часть рекурсии (т.н. "anchor") должна позволять вычислять начальное значение
+-- *  рекурсивная часть опираться на данные с предыдущей итерации и иметь условие останова
+-- + Напишите запрос к CTE
+
+WITH RECURSIVE fibionacci_numbers(val1, val2) AS (
+	VALUES(1, 1)
+		UNION ALL 
+	SELECT val2, val1 + val2 FROM fibionacci_numbers
+	WHERE val2 < 1000
+)
+SELECT * FROM fibionacci_numbers
+;
+
+============= представления =============
+
+--4. Создайте view с колонками клиент (ФИО; email) и title фильма, который он брал в прокат последним
+--+ Создайте представление:
+--* Создайте CTE, 
+--- возвращает строки из таблицы rental, 
+--- дополнено результатом row_number() в окне по customer_id
+--- упорядочено в этом окне по rental_date по убыванию (desc)
+--* Соеднините customer и полученную cte 
+--* соедините с inventory
+--* соедините с film
+--* отфильтруйте по row_number = 1
+
+CREATE VIEW rental_date AS 
+WITH cte_rental AS (
+SELECT *
+, row_number() over (partition by customer_id order by rental_date desc) r_num
+FROM rental r
+)
+SELECT c.first_name ||' '|| c.last_name fio, c.email , f.title  
+FROM cte_rental
+JOIN customer c ON cte_rental.customer_id = c.customer_id
+JOIN inventory i ON c.store_id = i.store_id 
+JOIN film f ON i.film_id = f.film_id 
+WHERE r_num = 1
+
+SELECT *
+FROM rental_date
+
+--4.1. Создайте представление с 3-мя полями: название фильма, имя актера и количество фильмов, в которых он снимался
+--+ Создайте представление:
+--* Используйте таблицу film
+--* Соедините с film_actor
+--* Соедините с actor
+--* count - агрегатная функция подсчета значений
+--* Задайте окно с использованием предложений over и partition by
+
+CREATE VIEW film_count AS 
+SELECT f.title 
+, a.first_name ||' '|| a.last_name fio
+, count (title) over (partition by a.first_name ||' '|| a.last_name) as count_film
+FROM film f 
+JOIN film_actor fa ON f.film_id = fa.film_id 
+JOIN actor a ON fa.actor_id = a.actor_id;
+
+SELECT *
+FROM film_count
+
+DROP VIEW film_count;
+
+--============= материализованные представления =============
+--
+--5. Создайте матеиализованное представление с колонками клиент (ФИО; email) и title фильма, который он брал в прокат последним
+--Иницилизируйте наполнение и напишите запрос к представлению.
+--+ Создайте материализованное представление без наполнения (with NO DATA):
+--* Создайте CTE, 
+--- возвращает строки из таблицы rental, 
+--- дополнено результатом row_number() в окне по customer_id
+--- упорядочено в этом окне по rental_date по убыванию (desc)
+--* Соеднините customer и полученную cte 
+--* соедините с inventory
+--* соедините с film
+--* отфильтруйте по row_number = 1
+--+ Обновите представление
+--+ Выберите данные
+
+CREATE MATERIALIZED VIEW rental_date_m AS 
+WITH cte_rental AS (
+SELECT *
+, row_number() over (partition by customer_id order by rental_date desc) r_num
+FROM rental r
+)
+SELECT c.first_name ||' '|| c.last_name fio, c.email , f.title  
+FROM cte_rental
+JOIN customer c ON cte_rental.customer_id = c.customer_id
+JOIN inventory i ON c.store_id = i.store_id 
+JOIN film f ON i.film_id = f.film_id 
+WHERE r_num = 1
+WITH NO DATA; 
+
+REFRESH MATERIALIZED VIEW rental_date_m;
+
+SELECT *
+FROM rental_date_m;
+
+DROP MATERIALIZED VIEW rental_date_m 
+
+
+--5.1. Содайте наполенное материализованное представление, содержащее:
+--список категорий фильмов, средняя продолжительность аренды которых более 5 дней
+--+ Создайте материализованное представление с наполнением (with DATA)
+--* Используйте таблицу film
+--* Соедините с таблицей film_category
+--* Соедините с таблицей category
+--* Сгруппируйте полученную таблицу по category.name
+--* Для каждой группы посчитайте средню продолжительность аренды фильмов
+--* Воспользуйтесь фильтрацией групп, для выбора категории со средней продолжительностью > 5 дней
+-- + Выберите данные
+
+CREATE MATERIALIZED VIEW rental_long AS
+SELECT c."name" 
+, round(avg(f.rental_duration), 2) 
+FROM film f 
+JOIN film_category fc ON f.film_id = fc.film_id 
+JOIN category c ON fc.category_id = c.category_id 
+WHERE f.rental_duration > 5
+GROUP BY c."name" 
+WITH DATA 
+
+DROP MATERIALIZED VIEW rental_long
+
+SELECT *
+FROM rental_long
+
+EXPLAIN SELECT c."name" 
+, round(avg(f.rental_duration), 2) 
+FROM film f 
+JOIN film_category fc ON f.film_id = fc.film_id 
+JOIN category c ON fc.category_id = c.category_id 
+WHERE f.rental_duration > 5
+GROUP BY c."name"
