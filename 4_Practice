@@ -1,0 +1,230 @@
+--======================== Создание таблиц ========================
+
+--1. Создайте таблицу "автор" с полями:
+--- id 
+--- имя
+--- псевдоним (может не быть)
+--- дата рождения
+--* Используйте 
+--    CREATE TABLE table_name (
+--        column_name TYPE column_constraint,
+--    );
+--* для id подойдет serial, ограничение primary key
+--* Имя и дата рождения - not null
+--* псевдоним - ограничений нет
+
+CREATE TABLE h_w_4.author(
+id serial PRIMARY KEY 
+, full_name VARCHAR (50) NOT NULL 
+, alias VARCHAR (50)
+, date_of_birth TIMESTAMP NOT NULL 
+);
+
+--1*  Создайте таблицу "Произведения" с полями: id произведения, год, название, id автора
+--* для id произведения подойдет serial, ограничение primary key
+--* название - not null
+--* год > 0 CHECK (год > 0)
+--* id автора пока оставьте без ограничений
+
+CREATE TABLE h_w_4.books(
+book_id serial PRIMARY KEY 
+, "name" VARCHAR (50)
+, "year" INTEGER
+, author_id INTEGER  
+--, FOREIGN KEY (author_id) REFERENCES author(id)
+); 
+
+--======================== Заполнение таблицы ========================
+--2. Вставьте данные по 3-м любым писателям таблицу авторов:
+--Жюль Габриэ́ль Верн, 08.02.1828
+--Михаи́л Ю́рьевич Ле́рмонтов, Гр. Диарбекир, 03.10.1814
+--Харуки Мураками, 12.01.1949
+--* Можно вставлять несколько строк одновременно:
+--    INSERT INTO table (column1, column2, …)
+--    VALUES
+--     (value1, value2, …),
+--     (value1, value2, …) ,...;
+
+INSERT INTO h_w_4.author (full_name, alias, date_of_birth)
+VALUES 
+('Жюль Габриэ́ль Верн', null, '08.02.1828')
+, ('Михаи́л Ю́рьевич Ле́рмонтов', 'Гр. Диарбекир', '03.10.1814')
+, ('Харуки Мураками', null, '12.01.1949');
+
+--2. Вставьте данные по 5-м любым произведениям, id автора - заполните NULL:
+--Двадцать тысяч льё под водой, 1916
+--Бородино, 1837
+--Герой нашего времени, 1840
+--Норвежский лес, 1980
+--Хроники заводной птицы, 1994
+
+INSERT INTO books ("name", "year")
+VALUES 
+('Двадцать тысяч льё под водой', '1916')
+, ('Бородино', '1837')
+, ('Герой нашего времени', '1840')
+, ('Норвежский лес', '1980')
+, ('Хроники заводной птицы', '1994');
+
+--======================== Модификация таблицы ========================
+--3. Добавьте поле "место рождения" в таблицу
+--* ALTER TABLE table_name 
+--  ADD COLUMN new_column_name TYPE;
+
+ALTER TABLE h_w_4.author 
+ADD COLUMN birth VARCHAR(50);
+
+-- 3* В таблице произведений измените колонку id автора - внешний ключ - ссылка на авторов
+-- * ALTER TABLE table_name ADD CONSTRAINT constraint_name constraint_definition
+
+ALTER TABLE h_w_4.books  
+ADD CONSTRAINT author_books FOREIGN KEY (author_id) REFERENCES author(id)
+
+-- ======================== Модификация данных ========================
+--4. Обновите данные, проставив корректное место рождения
+--писателю:
+--Жюль Габриэ́ль Верн - Франция
+--Михаи́л Ю́рьевич Ле́рмонтов - Российская Империя
+--Харуки Мураками - Япония
+--* UPDATE table
+--  SET column1 = value1,
+--   column2 = value2 ,...
+--  WHERE
+--   condition;
+
+UPDATE h_w_4.author
+SET birth = 'Франция'
+WHERE id = 1;
+
+UPDATE h_w_4.author
+SET birth = 'Российская Империя'
+WHERE id = 2;
+
+UPDATE h_w_4.author
+SET birth = 'Япония'
+WHERE id = 3;
+
+--4*. В таблице произведений проставьте id авторов:
+--Жюль Габриэ́ль Верн: 
+--    Двадцать тысяч льё под водой
+--Михаи́л Ю́рьевич Ле́рмонтов: 
+--    Бородино
+--    Герой нашего времени
+--Харуки Мураками:
+--    Норвежский лес
+--    Хроники заводной птицы
+
+UPDATE h_w_4.books 
+SET author_id  = 1
+WHERE book_id  = 1;
+
+UPDATE h_w_4.books 
+SET author_id  = 2
+WHERE book_id  in (2, 3);
+
+UPDATE h_w_4.books 
+SET author_id  = 3
+WHERE book_id  in (4, 5);
+
+-- ======================== Удаление данных ========================
+-- 5. Удалите произведение " Двадцать тысяч льё под водой"
+
+DELETE FROM h_w_4.books WHERE book_id = 1
+
+-- 5* Попробуйте удалить писателя Харуки Мураками, удалите писателя Жюль Габриэ́ль Верн
+
+DELETE FROM h_w_4.author WHERE id = 3
+
+-- ======================== Сложные типы данных =========================
+-- ======================== json ========================
+-- Создайте таблицу orders
+-- CREATE TABLE orders (
+--     ID serial NOT NULL PRIMARY KEY,
+--     info json NOT NULL
+--);
+
+CREATE TABLE h_w_4.orders (
+	ID serial NOT NULL PRIMARY KEY,
+	info json NOT NULL
+);
+
+--INSERT INTO orders (info)
+--VALUES
+-- (
+--'{ "customer": "John Doe", "items": {"product": "Beer","qty": 6}}'
+-- ),
+-- (
+--'{ "customer": "Lily Bush", "items": {"product": "Diaper","qty": 24}}'
+-- ),
+-- (
+--'{ "customer": "Josh William", "items": {"product": "Toy Car","qty": 1}}'
+-- ),
+-- (
+--'{ "customer": "Mary Clark", "items": {"product": "Toy Train","qty": 2}}'
+-- );
+
+INSERT INTO orders (info) VALUES
+(
+'{ "customer": "John Doe", "items": {"product": "Beer","qty": 6}}'
+),
+(
+'{ "customer": "Lily Bush", "items": {"product": "Diaper","qty": 24}}'
+),
+(
+'{ "customer": "Josh William", "items": {"product": "Toy Car","qty": 1}}' ),
+(
+'{ "customer": "Mary Clark", "items": {"product": "Toy Train","qty": 2}}'
+);
+
+SELECT info FROM orders;
+
+/*Postgres возвращает ответ в виде типа JSON. Для работы с ним есть 2 специальных оператора -> и ->>
+-> возвращает результат в виде JSON-объекта ->> возвращает результат в виде текста Получить имена всех покупателей:*/
+SELECT info ->> 'customer' AS customer FROM orders;
+
+--т.к. оператор -> возвращает JSON-объект, то к его результату можно снова применять оператор -> и ->>. 
+--Пример:
+SELECT
+info -> 'items' ->> 'product' as product
+FROM
+orders
+ORDER BY
+product;
+
+--6. Выведите общее количество заказов:
+--* CAST ( data AS type) преобразование типов
+--* SUM - агрегатная функция суммы
+--* -> возвращает JSON
+--*->> возвращает текст
+
+SELECT
+count(info)
+FROM
+orders;
+
+--6*  Выведите среднее количество заказов, продуктов начинающихся на "Toy"
+
+SELECT avg(CAST((info -> 'items') ->> 'qty' AS integer)) AS qty_avg FROM orders o
+WHERE (info -> 'items') ->> 'product' LIKE('Toy%');
+
+--======================== array ========================
+--7. Выведите сколько раз встречается специальный атрибут (special_feature) у
+--фильма
+--* array_length(anyarray, int) - возвращает длину указанной размерности массива
+
+SELECT count(all_sf) 
+FROM (
+SELECT unnest(special_features) AS all_sf
+FROM film f ) AS sf
+
+--7* Выведите все фильмы содержащие специальные атрибуты: 'Trailers','Commentaries'
+--* Используйте операторы:
+--@> - содержит
+--<@ - содержится в
+--*  ARRAY[элементы] - для описания массива
+
+SELECT title, all_sf 
+FROM (
+SELECT *, unnest(special_features) AS all_sf
+FROM film f ) AS sf
+WHERE all_sf in ('Trailers', 'Commentaries')
